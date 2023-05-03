@@ -196,45 +196,5 @@ func (c *Client) doExchange(conn Conn, metrics *Metrics, in Message) (out Messag
 
 		return
 	}
-
-	metrics.fixWriteDuration()
-
-	err = conn.ReadPackage(&p)
-	if err != nil {
-		c.logger.Error(err.Error())
-
-		return
-	}
-
-	if p.Type == Error {
-		_ = p.GetGob(&err)
-
-		return
-	}
-
-	err = p.GetGob(&cm)
-	if err != nil {
-		c.logger.Error(err.Error())
-
-		return
-	}
-
-	out, err = cm.Decode(*c.tcp.cipherKey)
-	if err != nil {
-		c.logger.Error(err.Error())
-
-		return
-	}
-
-	metrics.fixReadDuration()
-
-	if out.Error != nil {
-		err = out.Error
-
-		c.logger.Error(err.Error())
-
-		return
-	}
-
 	return
 }
