@@ -245,10 +245,10 @@ func (s *Server) doExchange(conn Conn, p Package, settings ServerSettings, metri
 		return
 	}
 
-	var req, _ Data
+	var req Data
 	req.SetBytes(msg.Content)
 	req.SetAddr(conn.RemoteAddr().String())
-	_, err = handler(ctx, req)
+	err = handler(ctx, req)
 	if err != nil {
 		s.logger.Error(err.Error())
 	}
