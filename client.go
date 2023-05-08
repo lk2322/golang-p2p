@@ -103,7 +103,7 @@ func (c *Client) try(topic string, req Data) (res Data, err error) {
 
 			c.tcp.cipherKey = &ck
 		} else {
-			msg, err = c.doExchange(wrapped, metrics, msg)
+			msg, err = c.doExchange(wrapped, msg)
 			if err != nil {
 				c.tcp.cipherKey = nil
 
@@ -171,7 +171,7 @@ func (c *Client) doHandshake(conn Conn, metrics *Metrics) (ck CipherKey, err err
 	return
 }
 
-func (c *Client) doExchange(conn Conn, metrics *Metrics, in Message) (out Message, err error) {
+func (c *Client) doExchange(conn Conn, in Message) (out Message, err error) {
 	var cm CryptMessage
 	cm, err = in.Encode(*c.tcp.cipherKey)
 	if err != nil {
@@ -196,45 +196,5 @@ func (c *Client) doExchange(conn Conn, metrics *Metrics, in Message) (out Messag
 
 		return
 	}
-
-	metrics.fixWriteDuration()
-
-	err = conn.ReadPackage(&p)
-	if err != nil {
-		c.logger.Error(err.Error())
-
-		return
-	}
-
-	if p.Type == Error {
-		_ = p.GetGob(&err)
-
-		return
-	}
-
-	err = p.GetGob(&cm)
-	if err != nil {
-		c.logger.Error(err.Error())
-
-		return
-	}
-
-	out, err = cm.Decode(*c.tcp.cipherKey)
-	if err != nil {
-		c.logger.Error(err.Error())
-
-		return
-	}
-
-	metrics.fixReadDuration()
-
-	if out.Error != nil {
-		err = out.Error
-
-		c.logger.Error(err.Error())
-
-		return
-	}
-
 	return
 }

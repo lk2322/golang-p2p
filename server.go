@@ -245,42 +245,13 @@ func (s *Server) doExchange(conn Conn, p Package, settings ServerSettings, metri
 		return
 	}
 
-	var req, res Data
+	var req Data
 	req.SetBytes(msg.Content)
 	req.SetAddr(conn.RemoteAddr().String())
-	res, err = handler(ctx, req)
+	err = handler(ctx, req)
 	if err != nil {
 		s.logger.Error(err.Error())
 	}
-
-	msg.Content = res.GetBytes()
-	msg.Error = err
-
-	metrics.fixHandleDuration()
-
-	cm, err = msg.Encode(*s.tcp.cipherKey)
-	if err != nil {
-		s.logger.Error(err.Error())
-
-		return
-	}
-
-	err = p.SetGob(cm)
-	if err != nil {
-		s.logger.Error(err.Error())
-
-		return
-	}
-
-	err = conn.WritePackage(p)
-	if err != nil {
-		s.logger.Error(err.Error())
-
-		return
-	}
-
-	metrics.fixWriteDuration()
-
 	return
 }
 
