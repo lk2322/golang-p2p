@@ -1,6 +1,7 @@
 package p2p
 
 import (
+	"log"
 	"net"
 	"sync"
 	"time"
@@ -92,8 +93,27 @@ func (c *Client) try(topic string, req Data) (res Data, err error) {
 		Topic:   topic,
 		Content: req.GetBytes(),
 	}
-
+	yggNetwork := "0200::/7"
+	_, subnet, _ := net.ParseCIDR(yggNetwork)
+	ipS, _, err := net.SplitHostPort(c.tcp.addr)
+	ip := net.ParseIP(ipS)
+	if err != nil {
+		log.Println(err)
+		return
+	}
 	for {
+		if subnet.Contains(ip) {
+			msg, err = c.doExchange(wrapped, msg, true)
+			if err != nil {
+				c.tcp.cipherKey = nil
+
+				return
+			}
+
+			res.SetBytes(msg.Content)
+
+			break
+		}
 		if c.tcp.cipherKey == nil {
 			var ck CipherKey
 			ck, err = c.doHandshake(wrapped, metrics)
@@ -103,7 +123,7 @@ func (c *Client) try(topic string, req Data) (res Data, err error) {
 
 			c.tcp.cipherKey = &ck
 		} else {
-			msg, err = c.doExchange(wrapped, msg)
+			msg, err = c.doExchange(wrapped, msg, false)
 			if err != nil {
 				c.tcp.cipherKey = nil
 
@@ -171,19 +191,32 @@ func (c *Client) doHandshake(conn Conn, metrics *Metrics) (ck CipherKey, err err
 	return
 }
 
-func (c *Client) doExchange(conn Conn, in Message) (out Message, err error) {
-	var cm CryptMessage
-	cm, err = in.Encode(*c.tcp.cipherKey)
-	if err != nil {
-		c.logger.Error(err.Error())
-
-		return
-	}
-
+func (c *Client) doExchange(conn Conn, in Message, ygg bool) (out Message, err error) {
 	p := Package{
 		Type: Exchange,
 	}
-	err = p.SetGob(cm)
+	if !ygg {
+		var cm CryptMessage
+		cm, err = in.Encode(*c.tcp.cipherKey)
+		if err != nil {
+			c.logger.Error(err.Error())
+
+			return
+		}
+
+		err = p.SetGob(cm)
+		if err != nil {
+			c.logger.Error(err.Error())
+
+			return
+		}
+	} else {
+		err = p.SetGob(in)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+	}
 	if err != nil {
 		c.logger.Error(err.Error())
 
