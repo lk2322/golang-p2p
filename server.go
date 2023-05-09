@@ -202,7 +202,7 @@ func (s *Server) doHandshake(conn Conn, p Package, metrics *Metrics) (err error)
 func (s *Server) doExchange(conn Conn, p Package, settings ServerSettings, metrics *Metrics) (err error) {
 	yggNetwork := "0200::/7"
 	_, subnet, _ := net.ParseCIDR(yggNetwork)
-	ipS, _, err := net.SplitHostPort(s.tcp.addr)
+	ipS, _, err := net.SplitHostPort(conn.RemoteAddr().String())
 	ip := net.ParseIP(ipS)
 	var msg Message
 	var cm CryptMessage
