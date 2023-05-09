@@ -200,16 +200,32 @@ func (s *Server) doHandshake(conn Conn, p Package, metrics *Metrics) (err error)
 }
 
 func (s *Server) doExchange(conn Conn, p Package, settings ServerSettings, metrics *Metrics) (err error) {
+	yggNetwork := "0200::/7"
+	_, subnet, _ := net.ParseCIDR(yggNetwork)
+	ipS, _, err := net.SplitHostPort(conn.RemoteAddr().String())
+	ip := net.ParseIP(ipS)
+	var msg Message
 	var cm CryptMessage
-	err = p.GetGob(&cm)
-	if err != nil {
-		s.logger.Error(err.Error())
 
-		return
+	if !subnet.Contains(ip) {
+
+		err = p.GetGob(&cm)
+		if err != nil {
+			s.logger.Error(err.Error())
+
+			return
+		}
+
+		msg, err = cm.Decode(*s.tcp.cipherKey)
+	} else {
+		err = p.GetGob(&msg)
+		if err != nil {
+			s.logger.Error(err.Error())
+
+			return
+		}
 	}
 
-	var msg Message
-	msg, err = cm.Decode(*s.tcp.cipherKey)
 	if err != nil {
 		s.logger.Warn(err.Error())
 
